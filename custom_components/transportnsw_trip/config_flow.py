@@ -8,7 +8,15 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.selector import (
+    BooleanSelector,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    TextSelector,
+)
 
 from .const import (
     CONF_ARRIVE_BY,
@@ -81,7 +89,7 @@ class TransportNSWTripOptionsFlow(config_entries.OptionsFlow):
     async def async_step_settings(self, user_input: dict | None = None) -> FlowResult:
         """Configure global polling settings."""
         if user_input is not None:
-            self._options[CONF_UPDATE_INTERVAL] = user_input[CONF_UPDATE_INTERVAL]
+            self._options[CONF_UPDATE_INTERVAL] = int(user_input[CONF_UPDATE_INTERVAL])
             self._options[CONF_JOURNEYS] = self._journeys
             return self.async_create_entry(title="", data=self._options)
 
@@ -90,7 +98,9 @@ class TransportNSWTripOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(
                     CONF_UPDATE_INTERVAL,
                     default=self._options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL_SECONDS),
-                ): vol.All(vol.Coerce(int), vol.Range(min=30, max=86400)),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=30, max=86400, mode=NumberSelectorMode.BOX)
+                ),
             }
         )
         return self.async_show_form(step_id="settings", data_schema=schema)
@@ -108,9 +118,9 @@ class TransportNSWTripOptionsFlow(config_entries.OptionsFlow):
                         CONF_ORIGIN: user_input[CONF_ORIGIN],
                         CONF_DESTINATION: user_input[CONF_DESTINATION],
                         CONF_ARRIVE_BY: user_input[CONF_ARRIVE_BY],
-                        CONF_OFFSET_MINUTES: user_input[CONF_OFFSET_MINUTES],
+                        CONF_OFFSET_MINUTES: int(user_input[CONF_OFFSET_MINUTES]),
                         CONF_MODES: user_input.get(CONF_MODES, []),
-                        CONF_MAX_RESULTS: user_input[CONF_MAX_RESULTS],
+                        CONF_MAX_RESULTS: int(user_input[CONF_MAX_RESULTS]),
                     }
                 )
                 self._options[CONF_JOURNEYS] = self._journeys
@@ -118,16 +128,18 @@ class TransportNSWTripOptionsFlow(config_entries.OptionsFlow):
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_NAME): str,
-                vol.Required(CONF_ORIGIN): str,
-                vol.Required(CONF_DESTINATION): str,
-                vol.Required(CONF_ARRIVE_BY, default=False): bool,
-                vol.Required(CONF_OFFSET_MINUTES, default=0): vol.All(
-                    vol.Coerce(int), vol.Range(min=0, max=1440)
+                vol.Required(CONF_NAME): TextSelector(),
+                vol.Required(CONF_ORIGIN): TextSelector(),
+                vol.Required(CONF_DESTINATION): TextSelector(),
+                vol.Required(CONF_ARRIVE_BY, default=False): BooleanSelector(),
+                vol.Required(CONF_OFFSET_MINUTES, default=0): NumberSelector(
+                    NumberSelectorConfig(min=0, max=1440, mode=NumberSelectorMode.BOX)
                 ),
-                vol.Optional(CONF_MODES, default=[]): cv.multi_select(MODE_OPTIONS),
-                vol.Required(CONF_MAX_RESULTS, default=DEFAULT_MAX_RESULTS): vol.All(
-                    vol.Coerce(int), vol.Range(min=1, max=10)
+                vol.Optional(CONF_MODES, default=[]): SelectSelector(
+                    SelectSelectorConfig(options=list(MODE_OPTIONS), multiple=True)
+                ),
+                vol.Required(CONF_MAX_RESULTS, default=DEFAULT_MAX_RESULTS): NumberSelector(
+                    NumberSelectorConfig(min=1, max=10, mode=NumberSelectorMode.BOX)
                 ),
             }
         )

@@ -1,0 +1,80 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Transport NSW Trip Planner",
+        "description": "Enter a TfNSW Open Data API key with Trip Planner API access.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "name_exists": "A journey with this name already exists."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Transport NSW Trip Planner",
+        "description": "Choose what to configure.",
+        "menu_options": {
+          "settings": "Refresh settings",
+          "add_journey": "Add journey",
+          "remove_journey": "Remove journey"
+        }
+      },
+      "settings": {
+        "title": "Refresh settings",
+        "description": "Set the polling interval for configured journeys.",
+        "data": {
+          "update_interval": "Refresh interval in seconds"
+        }
+      },
+      "add_journey": {
+        "title": "Add journey",
+        "description": "Create a journey that Home Assistant refreshes on a schedule.",
+        "data": {
+          "name": "Journey name",
+          "origin": "Origin stop, place, or coordinates",
+          "destination": "Destination stop, place, or coordinates",
+          "arrive_by": "Plan as arrive by instead of depart by",
+          "offset_minutes": "Plan this many minutes from now",
+          "modes": "Modes",
+          "max_results": "Maximum results"
+        }
+      },
+      "remove_journey": {
+        "title": "Remove journey",
+        "description": "Remove a configured journey.",
+        "data": {
+          "journey_to_remove": "Journey"
+        }
+      }
+    },
+    "error": {
+      "name_exists": "A journey with this name already exists."
+    }
+  },
+  "services": {
+    "plan_trip": {
+      "name": "Plan trip",
+      "description": "Plan a Transport NSW trip and return best and next options."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "best_delay": {
+        "name": "Best delay"
+      },
+      "best_departure": {
+        "name": "Best departure"
+      }
+    },
+    "binary_sensor": {
+      "disrupted": {
+        "name": "Disrupted"
+      }
+    }
+  }
+}
