@@ -12,10 +12,13 @@ from .const import CONF_JOURNEYS, CONF_NAME, DOMAIN
 SENSOR_KEYS = (
     "best_delay",
     "best_departure",
+    "best_arrival",
     "previous_delay",
     "previous_departure",
+    "previous_arrival",
     "next_delay",
     "next_departure",
+    "next_arrival",
 )
 BINARY_SENSOR_KEYS = ("disrupted",)
 

@@ -34,10 +34,13 @@ async def async_setup_entry(
         device_info = journey_device_info(entry, journey)
         entities.append(TripDelaySensor(coordinator, entry.entry_id, name, device_info))
         entities.append(TripBestDepartureSensor(coordinator, entry.entry_id, name, device_info))
+        entities.append(TripBestArrivalSensor(coordinator, entry.entry_id, name, device_info))
         entities.append(TripPreviousDelaySensor(coordinator, entry.entry_id, name, device_info))
         entities.append(TripPreviousDepartureSensor(coordinator, entry.entry_id, name, device_info))
+        entities.append(TripPreviousArrivalSensor(coordinator, entry.entry_id, name, device_info))
         entities.append(TripNextDelaySensor(coordinator, entry.entry_id, name, device_info))
         entities.append(TripNextDepartureSensor(coordinator, entry.entry_id, name, device_info))
+        entities.append(TripNextArrivalSensor(coordinator, entry.entry_id, name, device_info))
 
     async_add_entities(entities)
 
@@ -112,6 +115,21 @@ class TripBestDepartureSensor(TripSensorBase):
         return datetime.fromisoformat(best["departure_time"])
 
 
+class TripBestArrivalSensor(TripSensorBase):
+    """Recommended option predicted arrival sensor."""
+
+    sensor_key = "best_arrival"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return best option arrival timestamp."""
+        best = (self.data or {}).get("best_option")
+        if not best:
+            return None
+        return datetime.fromisoformat(best["arrival_time"])
+
+
 class TripPreviousDelaySensor(TripSensorBase):
     """Previous option arrival delay sensor."""
 
@@ -152,6 +170,21 @@ class TripPreviousDepartureSensor(TripSensorBase):
         return datetime.fromisoformat(previous_option["departure_time"])
 
 
+class TripPreviousArrivalSensor(TripSensorBase):
+    """Previous option predicted arrival sensor."""
+
+    sensor_key = "previous_arrival"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return previous option arrival timestamp."""
+        previous_option = (self.data or {}).get("previous_option")
+        if not previous_option:
+            return None
+        return datetime.fromisoformat(previous_option["arrival_time"])
+
+
 class TripNextDelaySensor(TripSensorBase):
     """Next later option arrival delay sensor."""
 
@@ -190,3 +223,18 @@ class TripNextDepartureSensor(TripSensorBase):
         if not next_option:
             return None
         return datetime.fromisoformat(next_option["departure_time"])
+
+
+class TripNextArrivalSensor(TripSensorBase):
+    """Next later option predicted arrival sensor."""
+
+    sensor_key = "next_arrival"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return next option arrival timestamp."""
+        next_option = (self.data or {}).get("next_option")
+        if not next_option:
+            return None
+        return datetime.fromisoformat(next_option["arrival_time"])

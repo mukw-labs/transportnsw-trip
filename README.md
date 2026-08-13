@@ -92,10 +92,10 @@ After adding the integration, open Configure from the integration card. The opti
   querying and reports no active option.
 - Remove journey: delete an existing saved journey.
 
-Configured journeys create one Home Assistant device per trip, with sensors for recommended
-departure time, recommended arrival delay, previous departure time, previous arrival delay, next
-departure time, and next arrival delay, plus a binary sensor for whether the recommended trip is
-delayed. Saving options reloads the integration so entity changes are applied.
+Configured journeys create one Home Assistant device per trip, with departure time, arrival time,
+and arrival delay sensors for the previous, recommended, and next trips, plus a binary sensor for
+whether the recommended trip is delayed. Saving options reloads the integration so entity changes
+are applied.
 
 Calendar-based scheduling is intentionally not required for the first implementation. A Home
 Assistant calendar is a good future trigger/source for recurring events, but the integration still

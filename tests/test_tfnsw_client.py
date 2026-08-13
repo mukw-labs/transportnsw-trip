@@ -192,7 +192,7 @@ def test_excluded_mode_params_use_tfnsw_checkbox_format() -> None:
 
 
 def test_journey_helpers_build_stable_entity_and_device_ids() -> None:
-    """Configured journeys should map to one device and seven entities."""
+    """Configured journeys should map to one device and ten entities."""
     journeys = [
         {
             CONF_NAME: "Morning Train",
@@ -209,10 +209,13 @@ def test_journey_helpers_build_stable_entity_and_device_ids() -> None:
     assert desired_unique_ids("entry123", journeys) == {
         "entry123_Morning Train_best_delay",
         "entry123_Morning Train_best_departure",
+        "entry123_Morning Train_best_arrival",
         "entry123_Morning Train_previous_delay",
         "entry123_Morning Train_previous_departure",
+        "entry123_Morning Train_previous_arrival",
         "entry123_Morning Train_next_delay",
         "entry123_Morning Train_next_departure",
+        "entry123_Morning Train_next_arrival",
         "entry123_Morning Train_disrupted",
     }
 

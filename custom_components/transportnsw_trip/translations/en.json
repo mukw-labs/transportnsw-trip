@@ -92,17 +92,26 @@
       "best_departure": {
         "name": "Recommended departure time"
       },
+      "best_arrival": {
+        "name": "Recommended arrival time"
+      },
       "previous_delay": {
         "name": "Previous arrival delay"
       },
       "previous_departure": {
         "name": "Previous departure time"
       },
+      "previous_arrival": {
+        "name": "Previous arrival time"
+      },
       "next_delay": {
         "name": "Next arrival delay"
       },
       "next_departure": {
         "name": "Next departure time"
+      },
+      "next_arrival": {
+        "name": "Next arrival time"
       }
     },
     "binary_sensor": {
