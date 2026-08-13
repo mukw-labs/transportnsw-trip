@@ -32,11 +32,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
     }
 
+    async_setup_services(hass)
     _async_remove_stale_entities(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await coordinator.async_refresh()
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-    async_setup_services(hass)
     return True
 
 

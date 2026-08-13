@@ -54,6 +54,45 @@ def test_normalize_trip_response_computes_delay_and_lateness() -> None:
     assert "raw_payload" not in options[0]
 
 
+def test_normalize_trip_response_reads_times_from_leg_locations() -> None:
+    """TfNSW rapidJSON puts leg times on origin/destination objects."""
+    raw = {
+        "journeys": [
+            {
+                "legs": [
+                    {
+                        "duration": 270,
+                        "origin": {
+                            "id": "2073161",
+                            "name": "Pymble",
+                            "departureTimePlanned": "2099-01-01T08:00:00Z",
+                            "departureTimeEstimated": "2099-01-01T08:02:00Z",
+                        },
+                        "destination": {
+                            "id": "207191",
+                            "name": "Killara",
+                            "arrivalTimePlanned": "2099-01-01T08:30:00Z",
+                            "arrivalTimeEstimated": "2099-01-01T08:33:00Z",
+                        },
+                        "transportation": {
+                            "number": "T1",
+                            "product": {"class": 1, "name": "Train"},
+                        },
+                    }
+                ]
+            }
+        ]
+    }
+
+    options = normalize_trip_response(raw, include_raw_payload=False)
+
+    assert len(options) == 1
+    assert options[0]["route"] == "T1"
+    assert options[0]["realtime_delay"] == 120
+    assert options[0]["lateness_minutes"] == 3
+    assert options[0]["departure_time"].endswith("08:02:00+00:00")
+
+
 def test_rank_options_for_departure_prefers_earliest_arrival() -> None:
     """For depart-by searches, best means earliest predicted arrival."""
     raw = {

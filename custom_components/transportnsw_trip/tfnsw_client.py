@@ -182,10 +182,22 @@ def _normalize_journey(journey: dict[str, Any], include_raw_payload: bool) -> di
 
     first = legs[0]
     last = legs[-1]
-    scheduled_departure = _parse_time(first.get("departureTimePlanned"))
-    predicted_departure = _parse_time(first.get("departureTimeEstimated")) or scheduled_departure
-    scheduled_arrival = _parse_time(last.get("arrivalTimePlanned"))
-    predicted_arrival = _parse_time(last.get("arrivalTimeEstimated")) or scheduled_arrival
+    first_origin = first.get("origin") or {}
+    last_destination = last.get("destination") or {}
+    scheduled_departure = _parse_time(
+        first.get("departureTimePlanned") or first_origin.get("departureTimePlanned")
+    )
+    predicted_departure = (
+        _parse_time(first.get("departureTimeEstimated") or first_origin.get("departureTimeEstimated"))
+        or scheduled_departure
+    )
+    scheduled_arrival = _parse_time(
+        last.get("arrivalTimePlanned") or last_destination.get("arrivalTimePlanned")
+    )
+    predicted_arrival = (
+        _parse_time(last.get("arrivalTimeEstimated") or last_destination.get("arrivalTimeEstimated"))
+        or scheduled_arrival
+    )
 
     if not all((scheduled_departure, predicted_departure, scheduled_arrival, predicted_arrival)):
         return None
@@ -227,10 +239,25 @@ def _normalize_leg(leg: dict[str, Any]) -> dict[str, Any]:
     return {
         "origin": _location_summary(leg.get("origin") or {}),
         "destination": _location_summary(leg.get("destination") or {}),
-        "departure_time": _iso_or_none(leg.get("departureTimeEstimated") or leg.get("departureTimePlanned")),
-        "scheduled_departure_time": _iso_or_none(leg.get("departureTimePlanned")),
-        "arrival_time": _iso_or_none(leg.get("arrivalTimeEstimated") or leg.get("arrivalTimePlanned")),
-        "scheduled_arrival_time": _iso_or_none(leg.get("arrivalTimePlanned")),
+        "departure_time": _iso_or_none(
+            leg.get("departureTimeEstimated")
+            or (leg.get("origin") or {}).get("departureTimeEstimated")
+            or leg.get("departureTimePlanned")
+            or (leg.get("origin") or {}).get("departureTimePlanned")
+        ),
+        "scheduled_departure_time": _iso_or_none(
+            leg.get("departureTimePlanned") or (leg.get("origin") or {}).get("departureTimePlanned")
+        ),
+        "arrival_time": _iso_or_none(
+            leg.get("arrivalTimeEstimated")
+            or (leg.get("destination") or {}).get("arrivalTimeEstimated")
+            or leg.get("arrivalTimePlanned")
+            or (leg.get("destination") or {}).get("arrivalTimePlanned")
+        ),
+        "scheduled_arrival_time": _iso_or_none(
+            leg.get("arrivalTimePlanned")
+            or (leg.get("destination") or {}).get("arrivalTimePlanned")
+        ),
         "mode": product.get("name") or product.get("class"),
         "route": transportation.get("number"),
         "destination_display": (transportation.get("destination") or {}).get("name"),
