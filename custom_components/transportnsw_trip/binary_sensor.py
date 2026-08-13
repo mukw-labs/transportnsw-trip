@@ -11,7 +11,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_JOURNEYS, CONF_NAME, DOMAIN
 from .coordinator import TransportNSWTripCoordinator
-from .entity_helpers import journey_device_info, journey_unique_id
+from .entity_helpers import (
+    journey_device_info,
+    journey_suggested_object_id,
+    journey_unique_id,
+)
 
 
 async def async_setup_entry(
@@ -51,6 +55,9 @@ class TripDisruptedBinarySensor(
         super().__init__(coordinator)
         self._journey_name = journey_name
         self._attr_unique_id = journey_unique_id(entry_id, journey_name, "disrupted")
+        self._attr_suggested_object_id = journey_suggested_object_id(
+            journey_name, "disrupted"
+        )
         self._attr_device_info = device_info
 
     @property

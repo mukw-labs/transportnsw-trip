@@ -21,6 +21,7 @@ from custom_components.transportnsw_trip.entity_helpers import (
     desired_device_identifiers,
     desired_unique_ids,
     journey_device_identifier,
+    journey_suggested_object_id,
 )
 from custom_components.transportnsw_trip.tfnsw_client import (
     _excluded_mode_params,
@@ -176,6 +177,7 @@ def test_journey_helpers_build_stable_entity_and_device_ids() -> None:
     ]
 
     assert journey_device_identifier("entry123", "Morning Train") == "entry123_Morning Train"
+    assert journey_suggested_object_id("Morning Train", "best_delay") == "Morning Train_best_delay"
     assert desired_device_identifiers("entry123", journeys) == {
         (DOMAIN, "entry123_Morning Train")
     }

@@ -35,6 +35,11 @@ def journey_unique_id(entry_id: str, journey_name: str, key: str) -> str:
     return f"{entry_id}_{journey_name}_{key}"
 
 
+def journey_suggested_object_id(journey_name: str, key: str) -> str:
+    """Return the suggested object ID for a journey entity."""
+    return f"{journey_name}_{key}"
+
+
 def desired_device_identifiers(entry_id: str, journeys: list[dict]) -> set[tuple[str, str]]:
     """Return all device identifiers expected for the configured journeys."""
     return {
