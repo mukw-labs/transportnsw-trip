@@ -1,0 +1,46 @@
+plan_trip:
+  name: Plan trip
+  description: Plan a Transport NSW trip and return best and next options.
+  fields:
+    origin:
+      required: true
+      selector:
+        text:
+    destination:
+      required: true
+      selector:
+        text:
+    depart_by:
+      required: false
+      selector:
+        datetime:
+    arrive_by:
+      required: false
+      selector:
+        datetime:
+    modes:
+      required: false
+      selector:
+        select:
+          multiple: true
+          options:
+            - train
+            - metro
+            - light_rail
+            - bus
+            - coach
+            - ferry
+            - school_bus
+    max_results:
+      required: false
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 10
+          mode: box
+    include_raw_payload:
+      required: false
+      default: false
+      selector:
+        boolean:

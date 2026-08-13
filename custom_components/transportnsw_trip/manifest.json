@@ -1,0 +1,12 @@
+{
+  "domain": "transportnsw_trip",
+  "name": "Transport NSW Trip Planner",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/mukw-labs/transportnsw-trip",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/mukw-labs/transportnsw-trip/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
