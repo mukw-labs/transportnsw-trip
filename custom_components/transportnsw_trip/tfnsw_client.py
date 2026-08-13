@@ -64,6 +64,7 @@ class TransportNSWClient:
             "next_option": ranked[1] if len(ranked) > 1 else None,
             "options": ranked[: request.max_results],
             "last_updated": datetime.now().astimezone().isoformat(),
+            **({"raw_response": raw} if request.include_raw_payload else {}),
         }
 
     async def _async_get_trip(self, request: TripPlanRequest) -> dict[str, Any]:
@@ -107,7 +108,14 @@ class TransportNSWClient:
                 if response.status in (403, 429):
                     raise TransportNSWRateLimitError("TfNSW API rate limit exceeded")
                 response.raise_for_status()
-                return await response.json()
+                raw = await response.json()
+                LOGGER.debug(
+                    "TfNSW trip response keys=%s journey_count=%s error=%s",
+                    sorted(raw.keys()),
+                    len(raw.get("journeys") or []),
+                    raw.get("error") or raw.get("errorMessage") or raw.get("message"),
+                )
+                return raw
         except ClientResponseError as err:
             raise TransportNSWError(f"TfNSW API returned HTTP {err.status}") from err
         except ClientError as err:
