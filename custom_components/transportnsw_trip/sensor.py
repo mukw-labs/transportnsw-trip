@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
 from datetime import datetime
+from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -34,6 +34,8 @@ async def async_setup_entry(
         device_info = journey_device_info(entry, journey)
         entities.append(TripDelaySensor(coordinator, entry.entry_id, name, device_info))
         entities.append(TripBestDepartureSensor(coordinator, entry.entry_id, name, device_info))
+        entities.append(TripNextDelaySensor(coordinator, entry.entry_id, name, device_info))
+        entities.append(TripNextDepartureSensor(coordinator, entry.entry_id, name, device_info))
 
     async_add_entities(entities)
 
@@ -67,7 +69,7 @@ class TripSensorBase(CoordinatorEntity[TransportNSWTripCoordinator], SensorEntit
 
 
 class TripDelaySensor(TripSensorBase):
-    """Best option arrival lateness sensor."""
+    """Recommended option arrival delay sensor."""
 
     sensor_key = "best_delay"
     _attr_device_class = SensorDeviceClass.DURATION
@@ -93,7 +95,7 @@ class TripDelaySensor(TripSensorBase):
 
 
 class TripBestDepartureSensor(TripSensorBase):
-    """Best option predicted departure sensor."""
+    """Recommended option predicted departure sensor."""
 
     sensor_key = "best_departure"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -105,3 +107,43 @@ class TripBestDepartureSensor(TripSensorBase):
         if not best:
             return None
         return datetime.fromisoformat(best["departure_time"])
+
+
+class TripNextDelaySensor(TripSensorBase):
+    """Next option arrival delay sensor."""
+
+    sensor_key = "next_delay"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    @property
+    def native_value(self) -> int | None:
+        """Return next option lateness in minutes."""
+        next_option = (self.data or {}).get("next_option")
+        return None if not next_option else next_option.get("lateness_minutes")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return next option details."""
+        data = self.data
+        if not data:
+            return None
+        return {
+            "next_option": data.get("next_option"),
+            "last_updated": data.get("last_updated"),
+        }
+
+
+class TripNextDepartureSensor(TripSensorBase):
+    """Next option predicted departure sensor."""
+
+    sensor_key = "next_departure"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return next option departure timestamp."""
+        next_option = (self.data or {}).get("next_option")
+        if not next_option:
+            return None
+        return datetime.fromisoformat(next_option["departure_time"])

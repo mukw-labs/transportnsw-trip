@@ -87,15 +87,21 @@
   "entity": {
     "sensor": {
       "best_delay": {
-        "name": "Best delay"
+        "name": "Recommended arrival delay"
       },
       "best_departure": {
-        "name": "Best departure"
+        "name": "Recommended departure time"
+      },
+      "next_delay": {
+        "name": "Next arrival delay"
+      },
+      "next_departure": {
+        "name": "Next departure time"
       }
     },
     "binary_sensor": {
       "disrupted": {
-        "name": "Disrupted"
+        "name": "Recommended trip delayed"
       }
     }
   }

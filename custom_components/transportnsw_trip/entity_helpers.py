@@ -9,7 +9,12 @@ from homeassistant.helpers.entity import DeviceInfo
 
 from .const import CONF_JOURNEYS, CONF_NAME, DOMAIN
 
-SENSOR_KEYS = ("best_delay", "best_departure")
+SENSOR_KEYS = (
+    "best_delay",
+    "best_departure",
+    "next_delay",
+    "next_departure",
+)
 BINARY_SENSOR_KEYS = ("disrupted",)
 
 
