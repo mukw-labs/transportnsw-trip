@@ -12,6 +12,8 @@ from .const import CONF_JOURNEYS, CONF_NAME, DOMAIN
 SENSOR_KEYS = (
     "best_delay",
     "best_departure",
+    "previous_delay",
+    "previous_departure",
     "next_delay",
     "next_departure",
 )

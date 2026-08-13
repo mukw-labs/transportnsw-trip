@@ -34,6 +34,8 @@ async def async_setup_entry(
         device_info = journey_device_info(entry, journey)
         entities.append(TripDelaySensor(coordinator, entry.entry_id, name, device_info))
         entities.append(TripBestDepartureSensor(coordinator, entry.entry_id, name, device_info))
+        entities.append(TripPreviousDelaySensor(coordinator, entry.entry_id, name, device_info))
+        entities.append(TripPreviousDepartureSensor(coordinator, entry.entry_id, name, device_info))
         entities.append(TripNextDelaySensor(coordinator, entry.entry_id, name, device_info))
         entities.append(TripNextDepartureSensor(coordinator, entry.entry_id, name, device_info))
 
@@ -83,12 +85,13 @@ class TripDelaySensor(TripSensorBase):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return best and next option details."""
+        """Return recommended, previous, and next option details."""
         data = self.data
         if not data:
             return None
         return {
             "best_option": data.get("best_option"),
+            "previous_option": data.get("previous_option"),
             "next_option": data.get("next_option"),
             "last_updated": data.get("last_updated"),
         }
@@ -109,8 +112,48 @@ class TripBestDepartureSensor(TripSensorBase):
         return datetime.fromisoformat(best["departure_time"])
 
 
+class TripPreviousDelaySensor(TripSensorBase):
+    """Previous option arrival delay sensor."""
+
+    sensor_key = "previous_delay"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    @property
+    def native_value(self) -> int | None:
+        """Return previous option lateness in minutes."""
+        previous_option = (self.data or {}).get("previous_option")
+        return None if not previous_option else previous_option.get("lateness_minutes")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return previous option details."""
+        data = self.data
+        if not data:
+            return None
+        return {
+            "previous_option": data.get("previous_option"),
+            "last_updated": data.get("last_updated"),
+        }
+
+
+class TripPreviousDepartureSensor(TripSensorBase):
+    """Previous option predicted departure sensor."""
+
+    sensor_key = "previous_departure"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return previous option departure timestamp."""
+        previous_option = (self.data or {}).get("previous_option")
+        if not previous_option:
+            return None
+        return datetime.fromisoformat(previous_option["departure_time"])
+
+
 class TripNextDelaySensor(TripSensorBase):
-    """Next option arrival delay sensor."""
+    """Next later option arrival delay sensor."""
 
     sensor_key = "next_delay"
     _attr_device_class = SensorDeviceClass.DURATION
@@ -135,7 +178,7 @@ class TripNextDelaySensor(TripSensorBase):
 
 
 class TripNextDepartureSensor(TripSensorBase):
-    """Next option predicted departure sensor."""
+    """Next later option predicted departure sensor."""
 
     sensor_key = "next_departure"
     _attr_device_class = SensorDeviceClass.TIMESTAMP

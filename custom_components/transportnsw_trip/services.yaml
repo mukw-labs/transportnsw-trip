@@ -1,6 +1,6 @@
 plan_trip:
   name: Plan trip
-  description: Plan a Transport NSW trip and return best and next options.
+  description: Plan a Transport NSW trip and return recommended, previous, and next options.
   fields:
     origin:
       required: true

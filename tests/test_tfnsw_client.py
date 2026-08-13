@@ -27,6 +27,7 @@ from custom_components.transportnsw_trip.tfnsw_client import (
     _excluded_mode_params,
     normalize_trip_response,
     rank_options,
+    select_trip_options,
 )
 
 
@@ -136,6 +137,30 @@ def test_rank_options_for_arrival_prefers_latest_feasible_departure() -> None:
     assert [option["route"] for option in ranked] == ["latest", "early"]
 
 
+def test_select_trip_options_returns_previous_and_next_around_recommended() -> None:
+    """Arrive-by searches should expose the trip before and after the recommendation."""
+    raw = {
+        "journeys": [
+            _journey("2099-01-01T07:30:00Z", "2099-01-01T08:20:00Z", "previous"),
+            _journey("2099-01-01T07:55:00Z", "2099-01-01T08:25:00Z", "recommended"),
+            _journey("2099-01-01T08:10:00Z", "2099-01-01T08:40:00Z", "next"),
+        ]
+    }
+    options = normalize_trip_response(raw, include_raw_payload=False)
+
+    selected = select_trip_options(
+        options,
+        arrive_by=True,
+        target_time=datetime.fromisoformat("2099-01-01T08:30:00+00:00"),
+        max_results=3,
+    )
+
+    assert selected["best_option"]["route"] == "recommended"
+    assert selected["previous_option"]["route"] == "previous"
+    assert selected["next_option"]["route"] == "next"
+    assert "predicted_departure_dt" not in selected["next_option"]
+
+
 def test_journey_date_time_returns_none_for_expired_one_off() -> None:
     """Expired one-off journeys should not keep polling the API."""
     journey = {
@@ -167,7 +192,7 @@ def test_excluded_mode_params_use_tfnsw_checkbox_format() -> None:
 
 
 def test_journey_helpers_build_stable_entity_and_device_ids() -> None:
-    """Configured journeys should map to one device and five entities."""
+    """Configured journeys should map to one device and seven entities."""
     journeys = [
         {
             CONF_NAME: "Morning Train",
@@ -184,6 +209,8 @@ def test_journey_helpers_build_stable_entity_and_device_ids() -> None:
     assert desired_unique_ids("entry123", journeys) == {
         "entry123_Morning Train_best_delay",
         "entry123_Morning Train_best_departure",
+        "entry123_Morning Train_previous_delay",
+        "entry123_Morning Train_previous_departure",
         "entry123_Morning Train_next_delay",
         "entry123_Morning Train_next_departure",
         "entry123_Morning Train_disrupted",

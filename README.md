@@ -29,7 +29,8 @@ data:
   max_results: 3
 ```
 
-The service returns a response containing `best_option`, `next_option`, and `options`.
+The service returns a response containing `best_option`, `previous_option`, `next_option`, and
+`options`.
 
 Example response:
 
@@ -49,6 +50,7 @@ Example response:
     "lateness_minutes": 3,
     "legs": []
   },
+  "previous_option": null,
   "next_option": null,
   "options": [],
   "last_updated": "2026-08-13T12:00:00+10:00"
@@ -91,9 +93,9 @@ After adding the integration, open Configure from the integration card. The opti
 - Remove journey: delete an existing saved journey.
 
 Configured journeys create one Home Assistant device per trip, with sensors for recommended
-departure time, recommended arrival delay, next departure time, and next arrival delay, plus a
-binary sensor for whether the recommended trip is delayed. Saving options reloads the integration
-so entity changes are applied.
+departure time, recommended arrival delay, previous departure time, previous arrival delay, next
+departure time, and next arrival delay, plus a binary sensor for whether the recommended trip is
+delayed. Saving options reloads the integration so entity changes are applied.
 
 Calendar-based scheduling is intentionally not required for the first implementation. A Home
 Assistant calendar is a good future trigger/source for recurring events, but the integration still

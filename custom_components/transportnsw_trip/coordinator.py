@@ -61,6 +61,7 @@ class TransportNSWTripCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 LOGGER.info("Skipping expired or invalid Transport NSW journey %s", name)
                 data[name] = {
                     "best_option": None,
+                    "previous_option": None,
                     "next_option": None,
                     "options": [],
                     "last_updated": datetime.now().astimezone().isoformat(),

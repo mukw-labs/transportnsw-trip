@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, replace
+from datetime import datetime, timedelta
 import logging
 from typing import Any
 
@@ -52,17 +52,67 @@ class TransportNSWClient:
         """Fetch and normalize trip options."""
         raw = await self._async_get_trip(request)
         options = normalize_trip_response(raw, request.include_raw_payload)
-        ranked = rank_options(options, request.arrive_by, request.date_time)
+        selected = select_trip_options(
+            options,
+            request.arrive_by,
+            request.date_time,
+            request.max_results,
+        )
+        if selected["best_option"] and not selected["previous_option"]:
+            previous_raw = await self._async_get_trip(
+                replace(
+                    request,
+                    arrive_by=True,
+                    date_time=datetime.fromisoformat(
+                        selected["best_option"]["arrival_time"]
+                    )
+                    - timedelta(seconds=1),
+                    max_results=3,
+                )
+            )
+            options = _merge_options(
+                options,
+                normalize_trip_response(previous_raw, request.include_raw_payload),
+            )
+            selected = select_trip_options(
+                options,
+                request.arrive_by,
+                request.date_time,
+                request.max_results,
+            )
+        if selected["best_option"] and not selected["next_option"]:
+            next_raw = await self._async_get_trip(
+                replace(
+                    request,
+                    arrive_by=False,
+                    date_time=datetime.fromisoformat(
+                        selected["best_option"]["departure_time"]
+                    )
+                    + timedelta(seconds=1),
+                    max_results=3,
+                )
+            )
+            options = _merge_options(
+                options,
+                normalize_trip_response(next_raw, request.include_raw_payload),
+            )
+            selected = select_trip_options(
+                options,
+                request.arrive_by,
+                request.date_time,
+                request.max_results,
+            )
         LOGGER.debug(
             "TfNSW trip plan returned %s raw option(s), %s ranked option(s)",
             len(options),
-            len(ranked),
+            len(selected["options"]),
         )
 
         return {
-            "best_option": ranked[0] if ranked else None,
-            "next_option": ranked[1] if len(ranked) > 1 else None,
-            "options": ranked[: request.max_results],
+            "best_option": selected["best_option"],
+            "previous_option": selected["previous_option"],
+            "next_option": selected["next_option"],
+            "options": selected["options"],
             "last_updated": datetime.now().astimezone().isoformat(),
             **({"raw_response": raw} if request.include_raw_payload else {}),
         }
@@ -80,7 +130,7 @@ class TransportNSWClient:
             "type_destination": _location_type(request.destination),
             "name_destination": request.destination,
             "TfNSWTR": "true",
-            "calcNumberOfTrips": str(max(request.max_results, 2)),
+            "calcNumberOfTrips": str(max(request.max_results, 3)),
         }
 
         params.update(_excluded_mode_params(request.modes))
@@ -132,16 +182,71 @@ def normalize_trip_response(raw: dict[str, Any], include_raw_payload: bool) -> l
     ]
 
 
+def _merge_options(
+    existing_options: list[dict[str, Any]], extra_options: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Merge trip options by stable journey identifier."""
+    by_id = {option["journey_id"]: option for option in existing_options}
+    for option in extra_options:
+        by_id.setdefault(option["journey_id"], option)
+    return list(by_id.values())
+
+
 def rank_options(
     options: list[dict[str, Any]], arrive_by: bool, target_time: datetime
 ) -> list[dict[str, Any]]:
     """Rank trip options and return the preferred order."""
-    target_time = target_time.astimezone()
-    future_or_feasible = [
+    return _strip_sort_fields(_rank_options(options, arrive_by, target_time))
+
+
+def select_trip_options(
+    options: list[dict[str, Any]], arrive_by: bool, target_time: datetime, max_results: int
+) -> dict[str, Any]:
+    """Select the recommended trip plus the immediately previous and next trips."""
+    future_options = _future_options(options)
+    ranked = _rank_options(future_options, arrive_by, target_time)
+    best = ranked[0] if ranked else None
+    by_departure = sorted(
+        future_options,
+        key=lambda option: (
+            option["predicted_departure_dt"],
+            option["predicted_arrival_dt"],
+            option["transfers"],
+        ),
+    )
+    best_index = by_departure.index(best) if best in by_departure else -1
+
+    return {
+        "best_option": _strip_sort_fields_from_option(best) if best else None,
+        "previous_option": (
+            _strip_sort_fields_from_option(by_departure[best_index - 1])
+            if best_index > 0
+            else None
+        ),
+        "next_option": (
+            _strip_sort_fields_from_option(by_departure[best_index + 1])
+            if best_index >= 0 and best_index + 1 < len(by_departure)
+            else None
+        ),
+        "options": _strip_sort_fields(ranked[:max_results]),
+    }
+
+
+def _future_options(options: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return options that have not already departed."""
+    return [
         option
         for option in options
         if option["predicted_departure_dt"] >= datetime.now().astimezone()
     ]
+
+
+def _rank_options(
+    options: list[dict[str, Any]], arrive_by: bool, target_time: datetime
+) -> list[dict[str, Any]]:
+    """Rank trip options while retaining internal sort fields."""
+    target_time = target_time.astimezone()
+    future_or_feasible = _future_options(options)
 
     if arrive_by:
         candidates = [
@@ -149,28 +254,24 @@ def rank_options(
             for option in future_or_feasible
             if option["predicted_arrival_dt"] <= target_time
         ]
-        return _strip_sort_fields(
-            sorted(
-                candidates,
-                key=lambda option: (
-                    -option["predicted_departure_dt"].timestamp(),
-                    option["transfers"],
-                    option["duration"],
-                    max(option["lateness_minutes"], 0),
-                ),
-            )
-        )
-
-    return _strip_sort_fields(
-        sorted(
-            future_or_feasible,
+        return sorted(
+            candidates,
             key=lambda option: (
-                option["predicted_arrival_dt"],
+                -option["predicted_departure_dt"].timestamp(),
                 option["transfers"],
                 option["duration"],
                 max(option["lateness_minutes"], 0),
             ),
         )
+
+    return sorted(
+        future_or_feasible,
+        key=lambda option: (
+            option["predicted_arrival_dt"],
+            option["transfers"],
+            option["duration"],
+            max(option["lateness_minutes"], 0),
+        ),
     )
 
 
@@ -323,7 +424,11 @@ def _excluded_mode_params(modes: list[str] | None) -> dict[str, str]:
 
 
 def _strip_sort_fields(options: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    for option in options:
-        option.pop("predicted_departure_dt", None)
-        option.pop("predicted_arrival_dt", None)
-    return options
+    return [_strip_sort_fields_from_option(option) for option in options]
+
+
+def _strip_sort_fields_from_option(option: dict[str, Any]) -> dict[str, Any]:
+    stripped = dict(option)
+    stripped.pop("predicted_departure_dt", None)
+    stripped.pop("predicted_arrival_dt", None)
+    return stripped

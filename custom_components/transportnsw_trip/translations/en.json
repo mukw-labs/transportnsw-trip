@@ -81,7 +81,7 @@
   "services": {
     "plan_trip": {
       "name": "Plan trip",
-      "description": "Plan a Transport NSW trip and return best and next options."
+      "description": "Plan a Transport NSW trip and return recommended, previous, and next options."
     }
   },
   "entity": {
@@ -91,6 +91,12 @@
       },
       "best_departure": {
         "name": "Recommended departure time"
+      },
+      "previous_delay": {
+        "name": "Previous arrival delay"
+      },
+      "previous_departure": {
+        "name": "Previous departure time"
       },
       "next_delay": {
         "name": "Next arrival delay"

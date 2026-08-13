@@ -48,6 +48,7 @@ WEEKDAY_INDEX = {
 SERVICE_PLAN_TRIP = "plan_trip"
 
 ATTR_BEST_OPTION = "best_option"
+ATTR_PREVIOUS_OPTION = "previous_option"
 ATTR_NEXT_OPTION = "next_option"
 ATTR_OPTIONS = "options"
 ATTR_LAST_UPDATED = "last_updated"
