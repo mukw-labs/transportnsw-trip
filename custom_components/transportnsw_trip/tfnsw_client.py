@@ -82,9 +82,7 @@ class TransportNSWClient:
             "calcNumberOfTrips": str(max(request.max_results, 2)),
         }
 
-        excluded = _excluded_modes(request.modes)
-        if excluded:
-            params["excludedMeans"] = ",".join(excluded)
+        params.update(_excluded_mode_params(request.modes))
 
         headers = {
             "Accept": "application/json",
@@ -270,11 +268,23 @@ def _location_type(value: str) -> str:
     return "any"
 
 
-def _excluded_modes(modes: list[str] | None) -> list[str]:
+def _excluded_mode_params(modes: list[str] | None) -> dict[str, str]:
+    """Return TfNSW mode exclusion parameters.
+
+    TfNSW uses `excludedMeans=checkbox` with one `exclMOT_<id>=1` parameter
+    for each mode that should be excluded.
+    """
     if not modes:
-        return []
+        return {}
     allowed = {MODE_MAP[mode] for mode in modes if mode in MODE_MAP}
-    return [str(mode_id) for mode_id in MODE_MAP.values() if mode_id not in allowed]
+    excluded = {
+        f"exclMOT_{mode_id}": "1"
+        for mode_id in MODE_MAP.values()
+        if mode_id not in allowed
+    }
+    if not excluded:
+        return {}
+    return {"excludedMeans": "checkbox", **excluded}
 
 
 def _strip_sort_fields(options: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -13,7 +13,11 @@ from custom_components.transportnsw_trip.const import (
     JOURNEY_TYPE_ONE_OFF,
 )
 from custom_components.transportnsw_trip.coordinator import _journey_date_time
-from custom_components.transportnsw_trip.tfnsw_client import normalize_trip_response, rank_options
+from custom_components.transportnsw_trip.tfnsw_client import (
+    _excluded_mode_params,
+    normalize_trip_response,
+    rank_options,
+)
 
 
 def test_normalize_trip_response_computes_delay_and_lateness() -> None:
@@ -102,6 +106,15 @@ def test_journey_date_time_resolves_fixed_recurring() -> None:
     }
 
     assert _journey_date_time(journey) is not None
+
+
+def test_excluded_mode_params_use_tfnsw_checkbox_format() -> None:
+    """TfNSW trip planner expects exclMOT flags, not a comma-separated list."""
+    params = _excluded_mode_params(["train"])
+
+    assert params["excludedMeans"] == "checkbox"
+    assert params["exclMOT_2"] == "1"
+    assert "exclMOT_1" not in params
 
 
 def _journey(departure: str, arrival: str, route: str) -> dict:
