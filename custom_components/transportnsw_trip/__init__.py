@@ -8,11 +8,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 from .const import CONF_API_KEY, CONF_JOURNEYS, DOMAIN
 from .coordinator import TransportNSWTripCoordinator
-from .entity_helpers import desired_unique_ids
+from .entity_helpers import desired_device_identifiers, desired_unique_ids
 from .services import async_setup_services, async_unload_services
 from .tfnsw_client import TransportNSWClient
 
@@ -59,10 +60,12 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 
 def _async_remove_stale_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Remove entity registry entries for journeys no longer configured."""
+    """Remove registry entries for journeys no longer configured."""
     registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
     journeys = entry.options.get(CONF_JOURNEYS, [])
     expected_unique_ids = desired_unique_ids(entry.entry_id, journeys)
+    expected_device_identifiers = desired_device_identifiers(entry.entry_id, journeys)
 
     for entity_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
         if entity_entry.platform != DOMAIN:
@@ -71,3 +74,16 @@ def _async_remove_stale_entities(hass: HomeAssistant, entry: ConfigEntry) -> Non
             continue
         LOGGER.info("Removing stale Transport NSW Trip Planner entity %s", entity_entry.entity_id)
         registry.async_remove(entity_entry.entity_id)
+
+    for device_entry in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
+        transportnsw_identifiers = {
+            identifier
+            for identifier in device_entry.identifiers
+            if identifier[0] == DOMAIN and identifier[1].startswith(f"{entry.entry_id}_")
+        }
+        if not transportnsw_identifiers:
+            continue
+        if transportnsw_identifiers & expected_device_identifiers:
+            continue
+        LOGGER.info("Removing stale Transport NSW Trip Planner device %s", device_entry.name)
+        device_registry.async_remove_device(device_entry.id)

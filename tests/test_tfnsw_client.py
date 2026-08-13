@@ -6,13 +6,22 @@ from datetime import datetime
 
 from custom_components.transportnsw_trip.const import (
     CONF_DATE_TIME,
+    CONF_DESTINATION,
     CONF_JOURNEY_TYPE,
+    CONF_NAME,
+    CONF_ORIGIN,
     CONF_TIME,
     CONF_WEEKDAYS,
+    DOMAIN,
     JOURNEY_TYPE_FIXED_RECURRING,
     JOURNEY_TYPE_ONE_OFF,
 )
 from custom_components.transportnsw_trip.coordinator import _journey_date_time
+from custom_components.transportnsw_trip.entity_helpers import (
+    desired_device_identifiers,
+    desired_unique_ids,
+    journey_device_identifier,
+)
 from custom_components.transportnsw_trip.tfnsw_client import (
     _excluded_mode_params,
     normalize_trip_response,
@@ -154,6 +163,27 @@ def test_excluded_mode_params_use_tfnsw_checkbox_format() -> None:
     assert params["excludedMeans"] == "checkbox"
     assert params["exclMOT_2"] == "1"
     assert "exclMOT_1" not in params
+
+
+def test_journey_helpers_build_stable_entity_and_device_ids() -> None:
+    """Configured journeys should map to one device and three entities."""
+    journeys = [
+        {
+            CONF_NAME: "Morning Train",
+            CONF_ORIGIN: "2073161",
+            CONF_DESTINATION: "207191",
+        }
+    ]
+
+    assert journey_device_identifier("entry123", "Morning Train") == "entry123_Morning Train"
+    assert desired_device_identifiers("entry123", journeys) == {
+        (DOMAIN, "entry123_Morning Train")
+    }
+    assert desired_unique_ids("entry123", journeys) == {
+        "entry123_Morning Train_best_delay",
+        "entry123_Morning Train_best_departure",
+        "entry123_Morning Train_disrupted",
+    }
 
 
 def _journey(departure: str, arrival: str, route: str) -> dict:

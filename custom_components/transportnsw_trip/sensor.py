@@ -9,12 +9,13 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_JOURNEYS, CONF_NAME, DOMAIN
 from .coordinator import TransportNSWTripCoordinator
-from .entity_helpers import journey_unique_id
+from .entity_helpers import journey_device_info, journey_unique_id
 
 
 async def async_setup_entry(
@@ -26,8 +27,9 @@ async def async_setup_entry(
 
     for journey in entry.options.get(CONF_JOURNEYS, []):
         name = journey[CONF_NAME]
-        entities.append(TripDelaySensor(coordinator, entry.entry_id, name))
-        entities.append(TripBestDepartureSensor(coordinator, entry.entry_id, name))
+        device_info = journey_device_info(entry, journey)
+        entities.append(TripDelaySensor(coordinator, entry.entry_id, name, device_info))
+        entities.append(TripBestDepartureSensor(coordinator, entry.entry_id, name, device_info))
 
     async_add_entities(entities)
 
@@ -37,12 +39,19 @@ class TripSensorBase(CoordinatorEntity[TransportNSWTripCoordinator], SensorEntit
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: TransportNSWTripCoordinator, entry_id: str, journey_name: str) -> None:
+    def __init__(
+        self,
+        coordinator: TransportNSWTripCoordinator,
+        entry_id: str,
+        journey_name: str,
+        device_info: DeviceInfo,
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._journey_name = journey_name
         self._attr_unique_id = journey_unique_id(entry_id, journey_name, self.sensor_key)
         self._attr_translation_key = self.sensor_key
+        self._attr_device_info = device_info
 
     @property
     def data(self) -> dict[str, Any] | None:
