@@ -47,7 +47,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_PLAN_TRIP,
         async_plan_trip,
         schema=SERVICE_SCHEMA,
-        supports_response=SupportsResponse.ONLY,
+        supports_response=SupportsResponse.OPTIONAL,
     )
 
 
@@ -96,4 +96,3 @@ def _as_datetime(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.astimezone()
     return value
-
