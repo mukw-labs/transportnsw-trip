@@ -52,11 +52,13 @@ class TransportNSWTripCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch all configured journeys."""
         journeys = self.entry.options.get(CONF_JOURNEYS, [])
         data: dict[str, Any] = {}
+        LOGGER.debug("Refreshing %s configured Transport NSW journey(s)", len(journeys))
 
         for journey in journeys:
             name = journey[CONF_NAME]
             date_time = _journey_date_time(journey)
             if date_time is None:
+                LOGGER.info("Skipping expired or invalid Transport NSW journey %s", name)
                 data[name] = {
                     "best_option": None,
                     "next_option": None,
@@ -74,9 +76,21 @@ class TransportNSWTripCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 modes=journey.get(CONF_MODES),
                 max_results=journey.get(CONF_MAX_RESULTS, DEFAULT_MAX_RESULTS),
             )
+            LOGGER.debug(
+                "Planning Transport NSW journey %s for %s (%s)",
+                name,
+                date_time.isoformat(),
+                "arrive_by" if request.arrive_by else "depart_at",
+            )
             try:
                 data[name] = await self.client.async_plan_trip(request)
+                LOGGER.debug(
+                    "Transport NSW journey %s refreshed with %s option(s)",
+                    name,
+                    len(data[name].get("options", [])),
+                )
             except TransportNSWError as err:
+                LOGGER.warning("Transport NSW journey %s refresh failed: %s", name, err)
                 raise UpdateFailed(str(err)) from err
 
         return data

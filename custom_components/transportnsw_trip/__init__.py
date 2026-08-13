@@ -2,21 +2,27 @@
 
 from __future__ import annotations
 
+import logging
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers import entity_registry as er
 
-from .const import CONF_API_KEY, DOMAIN
+from .const import CONF_API_KEY, CONF_JOURNEYS, DOMAIN
 from .coordinator import TransportNSWTripCoordinator
+from .entity_helpers import desired_unique_ids
 from .services import async_setup_services, async_unload_services
 from .tfnsw_client import TransportNSWClient
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
+LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Transport NSW Trip Planner from a config entry."""
+    LOGGER.debug("Setting up Transport NSW Trip Planner entry %s", entry.entry_id)
     api_key = entry.data[CONF_API_KEY]
     client = TransportNSWClient(async_get_clientsession(hass), api_key)
     coordinator = TransportNSWTripCoordinator(hass, entry, client)
@@ -26,8 +32,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
     }
 
-    await coordinator.async_config_entry_first_refresh()
+    _async_remove_stale_entities(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await coordinator.async_refresh()
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     async_setup_services(hass)
     return True
@@ -35,6 +42,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    LOGGER.debug("Unloading Transport NSW Trip Planner entry %s", entry.entry_id)
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -46,4 +54,20 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload the config entry when options change."""
+    LOGGER.debug("Reloading Transport NSW Trip Planner entry %s after options update", entry.entry_id)
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _async_remove_stale_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove entity registry entries for journeys no longer configured."""
+    registry = er.async_get(hass)
+    journeys = entry.options.get(CONF_JOURNEYS, [])
+    expected_unique_ids = desired_unique_ids(entry.entry_id, journeys)
+
+    for entity_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if entity_entry.platform != DOMAIN:
+            continue
+        if entity_entry.unique_id in expected_unique_ids:
+            continue
+        LOGGER.info("Removing stale Transport NSW Trip Planner entity %s", entity_entry.entity_id)
+        registry.async_remove(entity_entry.entity_id)

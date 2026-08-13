@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_JOURNEYS, CONF_NAME, DOMAIN
 from .coordinator import TransportNSWTripCoordinator
+from .entity_helpers import journey_unique_id
 
 
 async def async_setup_entry(
@@ -40,7 +41,7 @@ class TripSensorBase(CoordinatorEntity[TransportNSWTripCoordinator], SensorEntit
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._journey_name = journey_name
-        self._attr_unique_id = f"{entry_id}_{journey_name}_{self.sensor_key}"
+        self._attr_unique_id = journey_unique_id(entry_id, journey_name, self.sensor_key)
         self._attr_translation_key = self.sensor_key
 
     @property

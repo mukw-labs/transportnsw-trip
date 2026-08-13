@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from typing import Any
 
 import voluptuous as vol
@@ -18,6 +19,8 @@ from .tfnsw_client import (
     TransportNSWRateLimitError,
     TripPlanRequest,
 )
+
+LOGGER = logging.getLogger(__name__)
 
 SERVICE_SCHEMA = vol.Schema(
     {
@@ -79,6 +82,13 @@ async def _async_handle_plan_trip(hass: HomeAssistant, call: ServiceCall) -> dic
         modes=call.data.get("modes"),
         max_results=call.data["max_results"],
         include_raw_payload=call.data["include_raw_payload"],
+    )
+    LOGGER.debug(
+        "Handling plan_trip service call: origin=%s destination=%s mode=%s max_results=%s",
+        request.origin,
+        request.destination,
+        "arrive_by" if request.arrive_by else "depart_by",
+        request.max_results,
     )
 
     try:

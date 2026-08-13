@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import logging
 from typing import Any
 
 from aiohttp import ClientError, ClientResponseError, ClientSession
@@ -11,6 +12,7 @@ from aiohttp import ClientError, ClientResponseError, ClientSession
 from .const import DEFAULT_MAX_RESULTS, MODE_MAP
 
 BASE_TRIP_URL = "https://api.transport.nsw.gov.au/v1/tp/trip"
+LOGGER = logging.getLogger(__name__)
 
 
 class TransportNSWError(Exception):
@@ -51,6 +53,11 @@ class TransportNSWClient:
         raw = await self._async_get_trip(request)
         options = normalize_trip_response(raw, request.include_raw_payload)
         ranked = rank_options(options, request.arrive_by, request.date_time)
+        LOGGER.debug(
+            "TfNSW trip plan returned %s raw option(s), %s ranked option(s)",
+            len(options),
+            len(ranked),
+        )
 
         return {
             "best_option": ranked[0] if ranked else None,
@@ -85,6 +92,17 @@ class TransportNSWClient:
         }
 
         try:
+            LOGGER.debug(
+                "Calling TfNSW trip endpoint: origin=%s destination=%s depArrMacro=%s "
+                "date=%s time=%s max_results=%s modes=%s",
+                request.origin,
+                request.destination,
+                params["depArrMacro"],
+                params["itdDate"],
+                params["itdTime"],
+                request.max_results,
+                request.modes or "all",
+            )
             async with self._session.get(BASE_TRIP_URL, params=params, headers=headers, timeout=10) as response:
                 if response.status == 401:
                     raise TransportNSWAuthError("Invalid TfNSW API key")
@@ -264,4 +282,3 @@ def _strip_sort_fields(options: list[dict[str, Any]]) -> list[dict[str, Any]]:
         option.pop("predicted_departure_dt", None)
         option.pop("predicted_arrival_dt", None)
     return options
-
