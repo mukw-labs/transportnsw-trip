@@ -14,12 +14,16 @@
     }
   },
   "options": {
-    "menu": {
-      "settings": "Refresh settings",
-      "add_journey": "Add journey",
-      "remove_journey": "Remove journey"
-    },
     "step": {
+      "init": {
+        "title": "Transport NSW Trip Planner",
+        "description": "Choose what to configure.",
+        "menu_options": {
+          "settings": "Refresh settings",
+          "add_journey": "Add journey",
+          "remove_journey": "Remove journey"
+        }
+      },
       "settings": {
         "title": "Refresh settings",
         "description": "Set the polling interval for configured journeys.",
