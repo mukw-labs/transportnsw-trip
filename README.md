@@ -84,9 +84,15 @@ directory, restart Home Assistant, then add the integration from Settings > Devi
 After adding the integration, open Configure from the integration card. The options UI supports:
 
 - Refresh settings: set the polling interval in seconds.
-- Add journey: create a recurring journey with origin, destination, depart/arrive mode, offset
-  from now, transport modes, and result count.
-- Remove journey: delete an existing recurring journey.
+- Fixed recurring journey: repeat on selected weekdays at a fixed local time. The time can be used
+  as either a depart-at time or an arrive-by time.
+- One-off journey: query one exact local date/time. Once the date/time has passed, the entity stops
+  querying and reports no active option.
+- Remove journey: delete an existing saved journey.
 
 Configured journeys create sensors for best delay and best departure, plus a disruption binary
 sensor. Saving options reloads the integration so entity changes are applied.
+
+Calendar-based scheduling is intentionally not required for the first implementation. A Home
+Assistant calendar is a good future trigger/source for recurring events, but the integration still
+needs transit-specific fields such as origin, destination, depart-vs-arrive, modes, and result count.

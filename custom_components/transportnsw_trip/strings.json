@@ -33,20 +33,42 @@
       },
       "add_journey": {
         "title": "Add journey",
-        "description": "Create a journey that Home Assistant refreshes on a schedule.",
+        "description": "Choose the type of saved journey.",
+        "menu_options": {
+          "add_fixed_recurring": "Fixed recurring journey",
+          "add_one_off": "One-off journey"
+        }
+      },
+      "add_fixed_recurring": {
+        "title": "Add fixed recurring journey",
+        "description": "Create a journey that repeats on selected weekdays at a fixed local time.",
         "data": {
           "name": "Journey name",
           "origin": "Origin stop, place, or coordinates",
           "destination": "Destination stop, place, or coordinates",
-          "arrive_by": "Plan as arrive by instead of depart by",
-          "offset_minutes": "Plan this many minutes from now",
+          "arrive_by": "Use the time as an arrive-by time",
+          "time": "Local time",
+          "weekdays": "Weekdays",
+          "modes": "Modes",
+          "max_results": "Maximum results"
+        }
+      },
+      "add_one_off": {
+        "title": "Add one-off journey",
+        "description": "Create a saved journey for one exact local date and time.",
+        "data": {
+          "name": "Journey name",
+          "origin": "Origin stop, place, or coordinates",
+          "destination": "Destination stop, place, or coordinates",
+          "arrive_by": "Use the date/time as an arrive-by time",
+          "date_time": "Local date and time",
           "modes": "Modes",
           "max_results": "Maximum results"
         }
       },
       "remove_journey": {
         "title": "Remove journey",
-        "description": "Remove a configured journey.",
+        "description": "Remove a saved journey.",
         "data": {
           "journey_to_remove": "Journey"
         }

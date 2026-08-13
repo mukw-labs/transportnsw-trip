@@ -10,31 +10,41 @@ from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import (
     BooleanSelector,
+    DateTimeSelector,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
     SelectSelector,
     SelectSelectorConfig,
+    TimeSelector,
     TextSelector,
 )
 
 from .const import (
     CONF_ARRIVE_BY,
     CONF_DESTINATION,
+    CONF_DATE_TIME,
     CONF_JOURNEYS,
+    CONF_JOURNEY_TYPE,
     CONF_MAX_RESULTS,
     CONF_MODES,
     CONF_NAME,
-    CONF_OFFSET_MINUTES,
     CONF_ORIGIN,
+    CONF_TIME,
     CONF_UPDATE_INTERVAL,
+    CONF_WEEKDAYS,
     DEFAULT_MAX_RESULTS,
     DEFAULT_UPDATE_INTERVAL_SECONDS,
     DOMAIN,
+    JOURNEY_TYPE_FIXED_RECURRING,
+    JOURNEY_TYPE_ONE_OFF,
     MODE_MAP,
+    WEEKDAY_OPTIONS,
 )
 
 ACTION_ADD_JOURNEY = "add_journey"
+ACTION_ADD_FIXED_RECURRING = "add_fixed_recurring"
+ACTION_ADD_ONE_OFF = "add_one_off"
 ACTION_REMOVE_JOURNEY = "remove_journey"
 ACTION_SETTINGS = "settings"
 FIELD_JOURNEY_TO_REMOVE = "journey_to_remove"
@@ -106,7 +116,14 @@ class TransportNSWTripOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(step_id="settings", data_schema=schema)
 
     async def async_step_add_journey(self, user_input: dict | None = None) -> FlowResult:
-        """Add a configured recurring journey."""
+        """Choose the type of journey to add."""
+        return self.async_show_menu(
+            step_id="add_journey",
+            menu_options=[ACTION_ADD_FIXED_RECURRING, ACTION_ADD_ONE_OFF],
+        )
+
+    async def async_step_add_fixed_recurring(self, user_input: dict | None = None) -> FlowResult:
+        """Add a fixed-time recurring journey."""
         errors: dict[str, str] = {}
         if user_input is not None:
             if any(journey[CONF_NAME] == user_input[CONF_NAME] for journey in self._journeys):
@@ -115,10 +132,12 @@ class TransportNSWTripOptionsFlow(config_entries.OptionsFlow):
                 self._journeys.append(
                     {
                         CONF_NAME: user_input[CONF_NAME],
+                        CONF_JOURNEY_TYPE: JOURNEY_TYPE_FIXED_RECURRING,
                         CONF_ORIGIN: user_input[CONF_ORIGIN],
                         CONF_DESTINATION: user_input[CONF_DESTINATION],
                         CONF_ARRIVE_BY: user_input[CONF_ARRIVE_BY],
-                        CONF_OFFSET_MINUTES: int(user_input[CONF_OFFSET_MINUTES]),
+                        CONF_TIME: str(user_input[CONF_TIME]),
+                        CONF_WEEKDAYS: user_input[CONF_WEEKDAYS],
                         CONF_MODES: user_input.get(CONF_MODES, []),
                         CONF_MAX_RESULTS: int(user_input[CONF_MAX_RESULTS]),
                     }
@@ -132,8 +151,12 @@ class TransportNSWTripOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_ORIGIN): TextSelector(),
                 vol.Required(CONF_DESTINATION): TextSelector(),
                 vol.Required(CONF_ARRIVE_BY, default=False): BooleanSelector(),
-                vol.Required(CONF_OFFSET_MINUTES, default=0): NumberSelector(
-                    NumberSelectorConfig(min=0, max=1440, mode=NumberSelectorMode.BOX)
+                vol.Required(CONF_TIME): TimeSelector(),
+                vol.Required(
+                    CONF_WEEKDAYS,
+                    default=["mon", "tue", "wed", "thu", "fri"],
+                ): SelectSelector(
+                    SelectSelectorConfig(options=list(WEEKDAY_OPTIONS), multiple=True)
                 ),
                 vol.Optional(CONF_MODES, default=[]): SelectSelector(
                     SelectSelectorConfig(options=list(MODE_OPTIONS), multiple=True)
@@ -143,10 +166,51 @@ class TransportNSWTripOptionsFlow(config_entries.OptionsFlow):
                 ),
             }
         )
-        return self.async_show_form(step_id="add_journey", data_schema=schema, errors=errors)
+        return self.async_show_form(
+            step_id="add_fixed_recurring", data_schema=schema, errors=errors
+        )
+
+    async def async_step_add_one_off(self, user_input: dict | None = None) -> FlowResult:
+        """Add a one-off saved journey."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if any(journey[CONF_NAME] == user_input[CONF_NAME] for journey in self._journeys):
+                errors[CONF_NAME] = "name_exists"
+            else:
+                self._journeys.append(
+                    {
+                        CONF_NAME: user_input[CONF_NAME],
+                        CONF_JOURNEY_TYPE: JOURNEY_TYPE_ONE_OFF,
+                        CONF_ORIGIN: user_input[CONF_ORIGIN],
+                        CONF_DESTINATION: user_input[CONF_DESTINATION],
+                        CONF_ARRIVE_BY: user_input[CONF_ARRIVE_BY],
+                        CONF_DATE_TIME: _serialize_datetime(user_input[CONF_DATE_TIME]),
+                        CONF_MODES: user_input.get(CONF_MODES, []),
+                        CONF_MAX_RESULTS: int(user_input[CONF_MAX_RESULTS]),
+                    }
+                )
+                self._options[CONF_JOURNEYS] = self._journeys
+                return self.async_create_entry(title="", data=self._options)
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_NAME): TextSelector(),
+                vol.Required(CONF_ORIGIN): TextSelector(),
+                vol.Required(CONF_DESTINATION): TextSelector(),
+                vol.Required(CONF_ARRIVE_BY, default=False): BooleanSelector(),
+                vol.Required(CONF_DATE_TIME): DateTimeSelector(),
+                vol.Optional(CONF_MODES, default=[]): SelectSelector(
+                    SelectSelectorConfig(options=list(MODE_OPTIONS), multiple=True)
+                ),
+                vol.Required(CONF_MAX_RESULTS, default=DEFAULT_MAX_RESULTS): NumberSelector(
+                    NumberSelectorConfig(min=1, max=10, mode=NumberSelectorMode.BOX)
+                ),
+            }
+        )
+        return self.async_show_form(step_id="add_one_off", data_schema=schema, errors=errors)
 
     async def async_step_remove_journey(self, user_input: dict | None = None) -> FlowResult:
-        """Remove a configured recurring journey."""
+        """Remove a saved journey."""
         if not self._journeys:
             return self.async_create_entry(title="", data=self._options)
 
@@ -161,3 +225,10 @@ class TransportNSWTripOptionsFlow(config_entries.OptionsFlow):
         choices = {journey[CONF_NAME]: journey[CONF_NAME] for journey in self._journeys}
         schema = vol.Schema({vol.Required(FIELD_JOURNEY_TO_REMOVE): vol.In(choices)})
         return self.async_show_form(step_id="remove_journey", data_schema=schema)
+
+
+def _serialize_datetime(value) -> str:
+    """Serialize a datetime selector value."""
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)

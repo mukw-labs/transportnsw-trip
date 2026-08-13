@@ -4,6 +4,15 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from custom_components.transportnsw_trip.const import (
+    CONF_DATE_TIME,
+    CONF_JOURNEY_TYPE,
+    CONF_TIME,
+    CONF_WEEKDAYS,
+    JOURNEY_TYPE_FIXED_RECURRING,
+    JOURNEY_TYPE_ONE_OFF,
+)
+from custom_components.transportnsw_trip.coordinator import _journey_date_time
 from custom_components.transportnsw_trip.tfnsw_client import normalize_trip_response, rank_options
 
 
@@ -74,6 +83,27 @@ def test_rank_options_for_arrival_prefers_latest_feasible_departure() -> None:
     assert [option["route"] for option in ranked] == ["latest", "early"]
 
 
+def test_journey_date_time_returns_none_for_expired_one_off() -> None:
+    """Expired one-off journeys should not keep polling the API."""
+    journey = {
+        CONF_JOURNEY_TYPE: JOURNEY_TYPE_ONE_OFF,
+        CONF_DATE_TIME: "2000-01-01T08:00:00+10:00",
+    }
+
+    assert _journey_date_time(journey) is None
+
+
+def test_journey_date_time_resolves_fixed_recurring() -> None:
+    """Fixed recurring journeys resolve to a future matching datetime."""
+    journey = {
+        CONF_JOURNEY_TYPE: JOURNEY_TYPE_FIXED_RECURRING,
+        CONF_TIME: "08:30:00",
+        CONF_WEEKDAYS: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+    }
+
+    assert _journey_date_time(journey) is not None
+
+
 def _journey(departure: str, arrival: str, route: str) -> dict:
     return {
         "legs": [
@@ -91,4 +121,3 @@ def _journey(departure: str, arrival: str, route: str) -> dict:
             }
         ]
     }
-
